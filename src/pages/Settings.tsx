@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Save } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -13,15 +14,13 @@ export default function Settings() {
 
   const loadSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*');
-
-      if (error) throw error;
+      const settingsRef = collection(db, 'settings');
+      const snapshot = await getDocs(settingsRef);
 
       const settingsMap: any = {};
-      data?.forEach((setting) => {
-        settingsMap[setting.key] = setting.value;
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        settingsMap[data.key] = data.value;
       });
 
       setSettings(settingsMap);

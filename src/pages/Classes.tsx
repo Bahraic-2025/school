@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Class } from '../lib/firestore.types';
 import { Plus, Users } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export default function Classes() {
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -13,13 +15,16 @@ export default function Classes() {
 
   const loadClasses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*')
-        .order('name');
+      const classesRef = collection(db, 'classes');
+      const q = query(classesRef, orderBy('name'));
 
-      if (error) throw error;
-      setClasses(data || []);
+      const snapshot = await getDocs(q);
+      const classesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Class[];
+
+      setClasses(classesData);
     } catch (error) {
       console.error('Error loading classes:', error);
       toast.error('Failed to load classes');

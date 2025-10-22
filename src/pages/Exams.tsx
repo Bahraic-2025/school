@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Plus, Calendar } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -13,13 +14,14 @@ export default function Exams() {
 
   const loadExams = async () => {
     try {
-      const { data, error } = await supabase
-        .from('exams')
-        .select('*')
-        .order('start_date', { ascending: false });
-
-      if (error) throw error;
-      setExams(data || []);
+      const examsRef = collection(db, 'exams');
+      const q = query(examsRef, orderBy('start_date', 'desc'));
+      const snapshot = await getDocs(q);
+      const examsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setExams(examsData);
     } catch (error) {
       console.error('Error loading exams:', error);
       toast.error('Failed to load exams');

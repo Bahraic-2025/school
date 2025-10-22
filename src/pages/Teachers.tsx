@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Teacher } from '../lib/firestore.types';
 import { Plus, Search, Filter } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export default function Teachers() {
-  const [teachers, setTeachers] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -13,14 +15,20 @@ export default function Teachers() {
 
   const loadTeachers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('teachers')
-        .select('*')
-        .eq('status', 'active')
-        .order('first_name');
+      const teachersRef = collection(db, 'teachers');
+      const q = query(
+        teachersRef,
+        where('status', '==', 'active'),
+        orderBy('first_name')
+      );
 
-      if (error) throw error;
-      setTeachers(data || []);
+      const snapshot = await getDocs(q);
+      const teachersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Teacher[];
+
+      setTeachers(teachersData);
     } catch (error) {
       console.error('Error loading teachers:', error);
       toast.error('Failed to load teachers');

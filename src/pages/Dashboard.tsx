@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Users, GraduationCap, UserCheck, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -29,18 +30,22 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [studentsRes, teachersRes, invoicesRes] = await Promise.all([
-        supabase.from('students').select('id, status'),
-        supabase.from('teachers').select('id, status'),
-        supabase.from('invoices').select('paid_amount, balance'),
-      ]);
+      const studentsSnapshot = await getDocs(collection(db, 'students'));
+      const teachersSnapshot = await getDocs(query(collection(db, 'teachers'), where('status', '==', 'active')));
+      const invoicesSnapshot = await getDocs(collection(db, 'invoices'));
 
-      const totalStudents = studentsRes.data?.length || 0;
-      const activeStudents = studentsRes.data?.filter(s => s.status === 'active').length || 0;
-      const totalTeachers = teachersRes.data?.filter(t => t.status === 'active').length || 0;
+      const totalStudents = studentsSnapshot.size;
+      const activeStudents = studentsSnapshot.docs.filter(doc => doc.data().status === 'active').length;
+      const totalTeachers = teachersSnapshot.size;
 
-      const feesCollected = invoicesRes.data?.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0) || 0;
-      const feesPending = invoicesRes.data?.reduce((sum, inv) => sum + (inv.balance || 0), 0) || 0;
+      let feesCollected = 0;
+      let feesPending = 0;
+
+      invoicesSnapshot.forEach(doc => {
+        const data = doc.data();
+        feesCollected += data.paid_amount || 0;
+        feesPending += data.balance || 0;
+      });
 
       setStats({
         totalStudents,

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Plus, Search, Filter, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -26,13 +27,14 @@ export default function Admissions() {
 
   const loadApplications = async () => {
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setApplications(data || []);
+      const studentsRef = collection(db, 'students');
+      const q = query(studentsRef, orderBy('created_at', 'desc'));
+      const snapshot = await getDocs(q);
+      const applicationsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Application[];
+      setApplications(applicationsData);
     } catch (error) {
       console.error('Error loading applications:', error);
       toast.error('Failed to load applications');

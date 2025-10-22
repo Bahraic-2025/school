@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Plus, Search, DollarSign } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -13,14 +14,14 @@ export default function Fees() {
 
   const loadInvoices = async () => {
     try {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*, students(first_name, last_name, admission_id)')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      setInvoices(data || []);
+      const invoicesRef = collection(db, 'invoices');
+      const q = query(invoicesRef, orderBy('created_at', 'desc'), limit(50));
+      const snapshot = await getDocs(q);
+      const invoicesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setInvoices(invoicesData);
     } catch (error) {
       console.error('Error loading invoices:', error);
       toast.error('Failed to load invoices');

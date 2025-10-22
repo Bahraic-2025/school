@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Student } from '../lib/firestore.types';
 import { Plus, Search, Filter, Eye, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 export default function Students() {
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -14,14 +16,20 @@ export default function Students() {
 
   const loadStudents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('students')
-        .select('*')
-        .eq('status', 'active')
-        .order('first_name');
+      const studentsRef = collection(db, 'students');
+      const q = query(
+        studentsRef,
+        where('status', '==', 'active'),
+        orderBy('first_name')
+      );
 
-      if (error) throw error;
-      setStudents(data || []);
+      const snapshot = await getDocs(q);
+      const studentsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Student[];
+
+      setStudents(studentsData);
     } catch (error) {
       console.error('Error loading students:', error);
       toast.error('Failed to load students');

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Plus, Bell } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -13,13 +14,14 @@ export default function Announcements() {
 
   const loadAnnouncements = async () => {
     try {
-      const { data, error } = await supabase
-        .from('announcements')
-        .select('*')
-        .order('published_at', { ascending: false });
-
-      if (error) throw error;
-      setAnnouncements(data || []);
+      const announcementsRef = collection(db, 'announcements');
+      const q = query(announcementsRef, orderBy('published_at', 'desc'));
+      const snapshot = await getDocs(q);
+      const announcementsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAnnouncements(announcementsData);
     } catch (error) {
       console.error('Error loading announcements:', error);
       toast.error('Failed to load announcements');
